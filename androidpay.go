@@ -11,7 +11,7 @@ import (
 	"fmt"
 )
 
-func androidPayVerifyAndDecrypt(epk []byte, msg []byte, tag []byte, mpk *ecdsa.PrivateKey) ([]byte, error) {
+func androidPayVerifyAndDecrypt(msg, epk, tag []byte, mpk *ecdsa.PrivateKey) ([]byte, error) {
 	curve := elliptic.P256()
 	x, y := elliptic.Unmarshal(curve, epk)
 	if x == nil {

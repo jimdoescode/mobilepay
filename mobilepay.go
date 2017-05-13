@@ -24,31 +24,31 @@ type DecryptedToken struct {
 // NewAndroidPayDecryptedToken checks that the android pay token data is valid
 // then decrypts it returning a pointer to the DecryptedToken. An error is
 // returned if the android pay token is invalid or there was a problem
-// decrypting it. For more documentation on Android Pay decryption check out
-// https://developers.google.com/android-pay/integration/payment-token-cryptography
-func NewAndroidPayDecryptedToken(ephemeralPublicKey, encryptedMessage, tag string, merchantPrivateKey *ecdsa.PrivateKey) (*DecryptedToken, error) {
-	epk, err := base64.StdEncoding.DecodeString(ephemeralPublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("Could not b64 decode ephemeral public key %v", err)
-	}
-
-	msg, err := base64.StdEncoding.DecodeString(encryptedMessage)
+// decrypting it. For more documentation on Android Pay encrypted token data
+// and decryption check out https://developers.google.com/android-pay/integration/payment-token-cryptography
+func NewAndroidPayDecryptedToken(msg, epk, tag string, mpk *ecdsa.PrivateKey) (*DecryptedToken, error) {
+	rawmsg, err := base64.StdEncoding.DecodeString(msg)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode encrypted message %v", err)
 	}
 
-	tagb, err := base64.StdEncoding.DecodeString(tag)
+	rawepk, err := base64.StdEncoding.DecodeString(epk)
+	if err != nil {
+		return nil, fmt.Errorf("Could not b64 decode ephemeral public key %v", err)
+	}
+
+	rawtag, err := base64.StdEncoding.DecodeString(tag)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode tag %v", err)
 	}
 
-	decrypted, err := androidPayVerifyAndDecrypt(epk, msg, tagb, merchantPrivateKey)
+	tokjson, err := androidPayVerifyAndDecrypt(rawmsg, rawepk, rawtag, mpk)
 	if err != nil {
 		return nil, err
 	}
 
 	var token interface{}
-	decoder := json.NewDecoder(bytes.NewReader(decrypted))
+	decoder := json.NewDecoder(bytes.NewReader(tokjson))
 	decoder.UseNumber()
 	if err := decoder.Decode(&token); err != nil {
 		return nil, err
