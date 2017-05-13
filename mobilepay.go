@@ -1,5 +1,5 @@
 // Package mobilepay provides functionality for decrypting mobile
-// payment requests.
+// payment requests like those from Apple or Android Pay.
 package mobilepay
 
 import (
