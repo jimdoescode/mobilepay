@@ -53,14 +53,12 @@ cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 	block, _ := pem.Decode([]byte(pkPem))
 	ecdsaPrivKey, _ := x509.ParseECPrivateKey(block.Bytes)
 
-	tok := &AndroidPayToken{
-		"V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
+	decrypted, err := NewAndroidPayDecryptedToken(
 		"BB9cOXHgf3KcY8dbsU6fhzqTJm3JFvzD+8wcWg0W9r+Xl5gYjoZRxHuYocAx3g82v2o0Le1E2w4sDDl5w3C0lmY=",
+		"V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
 		"boJLmOxDduTV5a34CO2IRbgxUjZ9WmfzxNl1lWqQ+Z0=",
 		ecdsaPrivKey,
-	}
-
-	decrypted, err := tok.VerifyThenDecrypt()
+	)
 
 	if err != nil || decrypted == nil {
 		t.Errorf("Could not decrypt token: %v", err)
@@ -79,8 +77,7 @@ cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 	}
 }
 
-func ExampleAndroidPayToken() {
-
+func ExampleNewAndroidPayDecryptedToken() {
 	//Test values provided by https://github.com/spreedly/r2d2
 	pkPem := []byte(`
 -----BEGIN EC PRIVATE KEY-----
@@ -94,14 +91,12 @@ cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 	block, _ := pem.Decode(pkPem)
 	ecdsaPrivKey, _ := x509.ParseECPrivateKey(block.Bytes)
 
-	tok := &AndroidPayToken{
-		"V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
+	decrypted, err := NewAndroidPayDecryptedToken(
 		"BB9cOXHgf3KcY8dbsU6fhzqTJm3JFvzD+8wcWg0W9r+Xl5gYjoZRxHuYocAx3g82v2o0Le1E2w4sDDl5w3C0lmY=",
+		"V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
 		"boJLmOxDduTV5a34CO2IRbgxUjZ9WmfzxNl1lWqQ+Z0=",
 		ecdsaPrivKey,
-	}
-
-	decrypted, err := tok.VerifyThenDecrypt()
+	)
 
 	if err != nil {
 		fmt.Println("error: ", err)

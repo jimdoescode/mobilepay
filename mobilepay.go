@@ -21,43 +21,28 @@ type DecryptedToken struct {
 	Eci         string
 }
 
-// EncryptedToken interface is implemented by all
-// encrypted mobile payment tokens.
-type EncryptedToken interface {
-	VerifyThenDecrypt() (*DecryptedToken, error)
-}
-
-// AndroidPayToken is the struct that should be used to decrypt an
-// Android Pay request. For more details check out
+// NewAndroidPayDecryptedToken checks that the android pay token data is valid
+// then decrypts it returning a pointer to the DecryptedToken. An error is
+// returned if the android pay token is invalid or there was a problem
+// decrypting it. For more documentation on Android Pay decryption check out
 // https://developers.google.com/android-pay/integration/payment-token-cryptography
-type AndroidPayToken struct {
-	EncryptedMessage   string
-	EphemeralPublicKey string
-	Tag                string
-	MerchantPrivateKey *ecdsa.PrivateKey
-}
-
-// VerifyThenDecrypt implements mobilepay.EncryptedToken.VerifyThenDecrypt and
-// checks that an android pay token is valid then decrypts it returning a
-// pointer to the DecryptedToken. An error is returned if the android pay
-// token is invalid or there was a problem decrypting it.
-func (apt *AndroidPayToken) VerifyThenDecrypt() (*DecryptedToken, error) {
-	epk, err := base64.StdEncoding.DecodeString(apt.EphemeralPublicKey)
+func NewAndroidPayDecryptedToken(ephemeralPublicKey string, encryptedMessage string, tag string, merchantPrivateKey *ecdsa.PrivateKey) (*DecryptedToken, error) {
+	epk, err := base64.StdEncoding.DecodeString(ephemeralPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode ephemeral public key %v", err)
 	}
 
-	msg, err := base64.StdEncoding.DecodeString(apt.EncryptedMessage)
+	msg, err := base64.StdEncoding.DecodeString(encryptedMessage)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode encrypted message %v", err)
 	}
 
-	tag, err := base64.StdEncoding.DecodeString(apt.Tag)
+	tagb, err := base64.StdEncoding.DecodeString(tag)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode tag %v", err)
 	}
 
-	decrypted, err := androidPayVerifyAndDecrypt(epk, msg, tag, apt.MerchantPrivateKey)
+	decrypted, err := androidPayVerifyAndDecrypt(epk, msg, tagb, merchantPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +64,9 @@ func (apt *AndroidPayToken) VerifyThenDecrypt() (*DecryptedToken, error) {
 		mapping["3dsCryptogram"].(string),
 		mapping["3dsEciIndicator"].(string),
 	}, nil
+}
+
+// NewApplePayDecryptedToken is not implemented yet.
+func NewApplePayDecryptedToken() (*DecryptedToken, error) {
+	return nil, fmt.Errorf("Not implemented yet!")
 }
