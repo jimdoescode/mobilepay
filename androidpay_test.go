@@ -38,6 +38,7 @@ func TestAndroidPayDecryption(t *testing.T) {
 	}
 }
 
+// Test values below provided by https://github.com/spreedly/r2d2 Thanks!
 const EC_PRIVATE_KEY_PEM = `
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIDnEBl2fHeMqFqePupLh6RTQM6Ro16v8JjIAVXcHp4ktoAoGCCqGSM49
