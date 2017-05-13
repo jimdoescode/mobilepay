@@ -5,7 +5,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -75,4 +77,39 @@ func TestAndroidPayTokenDecryption(t *testing.T) {
 	if decrypted.Cryptogram != "AgAAAAAABk4DWZ4C28yUQAAAAAA=" {
 		t.Errorf("Unexpected 3dsCryptogram value, expecting AgAAAAAABk4DWZ4C28yUQAAAAAA= found %s", decrypted.Cryptogram)
 	}
+}
+
+func ExampleAndroidPayToken(t *testing.T) {
+	block, _ := pem.Decode([]byte(EC_PRIVATE_KEY_PEM))
+	ecdsaPrivKey, _ := x509.ParseECPrivateKey(block.Bytes)
+
+	tok := &AndroidPayToken{
+		"V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
+		"BB9cOXHgf3KcY8dbsU6fhzqTJm3JFvzD+8wcWg0W9r+Xl5gYjoZRxHuYocAx3g82v2o0Le1E2w4sDDl5w3C0lmY=",
+		"boJLmOxDduTV5a34CO2IRbgxUjZ9WmfzxNl1lWqQ+Z0=",
+		ecdsaPrivKey,
+	}
+
+	decrypted, err := tok.VerifyThenDecrypt()
+
+	if err != nil {
+		fmt.Println("error: ", err)
+		return
+	}
+
+	b, err := json.MarshalIndent(decrypted, "", "    ")
+	if err != nil {
+		fmt.Println("error: ", err)
+		return
+	}
+
+	fmt.Printf("%s\n", b)
+	// Output: {
+	//     "Dpan": "4895370012003478",
+	//     "ExpireMonth": "12",
+	//     "ExpireYear": "2020",
+	//     "Method": "3DS",
+	//     "Cryptogram": "AgAAAAAABk4DWZ4C28yUQAAAAAA=",
+	//     "Eci": "07"
+	// }
 }
