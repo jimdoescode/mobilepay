@@ -79,7 +79,7 @@ cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 	}
 }
 
-func ExampleAndroidPayToken(t *testing.T) {
+func ExampleAndroidPayToken() {
 
 	//Test values provided by https://github.com/spreedly/r2d2
 	pkPem := []byte(`
