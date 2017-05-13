@@ -25,8 +25,7 @@ When an encrypted Android Pay request comes in, the JSON will look something lik
 }
 ```
 
-Those fields are reflected in the `mobilepay.AndroidPayToken` struct so add them
-as well as a pointer to your `ecdsa.PrivateKey`.
+Those fields as well as a pointer to your `ecdsa.PrivateKey` are passed to `NewAndroidPayDecryptedToken`.
 ```golang
 block, _ := pem.Decode(pemPrivateKeyBytes)
 privKey, _ := x509.ParseECPrivateKey(block.Bytes)
@@ -35,27 +34,20 @@ var request interface{}
 json.Unmarshal(jsonBytes, &request)
 mapping := request.(map[string]string)
 
-token := &mobilepay.AndroidPayToken{
+decrypted, err := NewAndroidPayDecryptedToken(
 	mapping["encryptedMessage"],
 	mapping["ephemeralPublicKey"],
 	mapping["tag"],
 	privKey,
-}
+)
 ```
 **Note** in the above code snippet we assume that the private key is stored in 
 PEM format. You'll have to figure out how to decode your private key if it's 
 in another format.
 
-Now that you have an AndroidPayToken value you can call `VerifyThenDecrypt` on
-it to decrypt it and do whatever you need to with the decrypted result.
-```golang
-decrypted, err := token.VerifyThenDecrypt()
-if err == nil {
-	// Something went wrong
-} else {
-	// Store the decrypted token or send it to a payment processor
-}
-```
+If `NewAndroidPayDecryptedToken` returns a valid DecryptedToken value and not an
+error then you're good to go! Either hand the token off to your payment processor
+or store it and return a token for future payment handling.
 
 Apple Pay
 ---------
