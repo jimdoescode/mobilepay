@@ -40,17 +40,17 @@ func TestAndroidPayDecryption(t *testing.T) {
 	}
 }
 
-// Test values below provided by https://github.com/spreedly/r2d2 Thanks!
-const EC_PRIVATE_KEY_PEM = `
+func TestAndroidPayTokenDecryption(t *testing.T) {
+	// Test values below provided by https://github.com/spreedly/r2d2 Thanks!
+	pkPem := []byte(`
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIDnEBl2fHeMqFqePupLh6RTQM6Ro16v8JjIAVXcHp4ktoAoGCCqGSM49
 AwEHoUQDQgAEa6fxL04JEhOi/+1QzTHuh6d+qoEizAo79xNkJ5xvaeizZv2wBRV+
 cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 -----END EC PRIVATE KEY-----
-`
-
-func TestAndroidPayTokenDecryption(t *testing.T) {
-	block, _ := pem.Decode([]byte(EC_PRIVATE_KEY_PEM))
+`,
+	)
+	block, _ := pem.Decode([]byte(pkPem))
 	ecdsaPrivKey, _ := x509.ParseECPrivateKey(block.Bytes)
 
 	tok := &AndroidPayToken{
@@ -80,14 +80,18 @@ func TestAndroidPayTokenDecryption(t *testing.T) {
 }
 
 func ExampleAndroidPayToken(t *testing.T) {
-	block, _ := pem.Decode([]byte(`
+
+	//Test values provided by https://github.com/spreedly/r2d2
+	pkPem := []byte(`
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIDnEBl2fHeMqFqePupLh6RTQM6Ro16v8JjIAVXcHp4ktoAoGCCqGSM49
 AwEHoUQDQgAEa6fxL04JEhOi/+1QzTHuh6d+qoEizAo79xNkJ5xvaeizZv2wBRV+
 cynhOeThDf8FJDE4TIGL0G+a4zlrM3wqNw==
 -----END EC PRIVATE KEY-----
-`
-	))
+`,
+	)
+
+	block, _ := pem.Decode(pkPem)
 	ecdsaPrivKey, _ := x509.ParseECPrivateKey(block.Bytes)
 
 	tok := &AndroidPayToken{
