@@ -20,7 +20,8 @@ func TestAndroidPayDecryption(t *testing.T) {
 	encryptedMsg, _ := base64.StdEncoding.DecodeString("PHxZxBQvVWwP")
 	tag, _ := base64.StdEncoding.DecodeString("TNwa3Q2WiyGi/eDA4XYVklq08KZiSxB7xvRiKK3H7kE=")
 
-	// This test cryptogram should be decrypted by the merchant private key and decrypts to "plaintext"
+	// This test cryptogram should be decrypted by the merchant
+	// private key and decrypts to the phrase "plaintext"
 	decrypted, err := androidPayVerifyAndDecrypt(
 		ephemeralPubKey,
 		encryptedMsg,
