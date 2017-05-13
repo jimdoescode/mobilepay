@@ -26,7 +26,7 @@ type DecryptedToken struct {
 // returned if the android pay token is invalid or there was a problem
 // decrypting it. For more documentation on Android Pay decryption check out
 // https://developers.google.com/android-pay/integration/payment-token-cryptography
-func NewAndroidPayDecryptedToken(ephemeralPublicKey string, encryptedMessage string, tag string, merchantPrivateKey *ecdsa.PrivateKey) (*DecryptedToken, error) {
+func NewAndroidPayDecryptedToken(ephemeralPublicKey, encryptedMessage, tag string, merchantPrivateKey *ecdsa.PrivateKey) (*DecryptedToken, error) {
 	epk, err := base64.StdEncoding.DecodeString(ephemeralPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("Could not b64 decode ephemeral public key %v", err)
