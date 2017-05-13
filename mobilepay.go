@@ -1,3 +1,5 @@
+// Package mobilepay provides functionality for decrypting mobile
+// payment requests.
 package mobilepay
 
 import (
@@ -8,6 +10,8 @@ import (
 	"fmt"
 )
 
+// DecryptedToken is what will be returned when a mobile
+// payment token is successfully decrypted.
 type DecryptedToken struct {
 	Dpan        string
 	ExpireMonth string
@@ -17,10 +21,20 @@ type DecryptedToken struct {
 	Eci         string
 }
 
+// EncryptedToken interface is implemented by all
+// encrypted mobile payment tokens.
 type EncryptedToken interface {
+
+	// VerifyThenDecrypt will check that a mobile payment token is valid then
+	// decrypt it returning a pointer to the DecryptedToken. An error is
+	// returned if the mobile payment token is invalid or there was a problem
+	// decrypting it.
 	VerifyThenDecrypt() (*DecryptedToken, error)
 }
 
+// AndroidPayToken is the struct that should be used to decrypt an
+// Android Pay request. For more details check out
+// https://developers.google.com/android-pay/integration/payment-token-cryptography
 type AndroidPayToken struct {
 	EncryptedMessage   string
 	EphemeralPublicKey string
@@ -65,5 +79,5 @@ func (apt *AndroidPayToken) VerifyThenDecrypt() (*DecryptedToken, error) {
 		mapping["authMethod"].(string),
 		mapping["3dsCryptogram"].(string),
 		mapping["3dsEciIndicator"].(string),
-	}, err
+	}, nil
 }
