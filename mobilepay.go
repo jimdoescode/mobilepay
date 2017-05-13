@@ -24,11 +24,6 @@ type DecryptedToken struct {
 // EncryptedToken interface is implemented by all
 // encrypted mobile payment tokens.
 type EncryptedToken interface {
-
-	// VerifyThenDecrypt will check that a mobile payment token is valid then
-	// decrypt it returning a pointer to the DecryptedToken. An error is
-	// returned if the mobile payment token is invalid or there was a problem
-	// decrypting it.
 	VerifyThenDecrypt() (*DecryptedToken, error)
 }
 
@@ -42,6 +37,10 @@ type AndroidPayToken struct {
 	MerchantPrivateKey *ecdsa.PrivateKey
 }
 
+// VerifyThenDecrypt implements mobilepay.EncryptedToken.VerifyThenDecrypt and
+// checks that an android pay token is valid then decrypts it returning a
+// pointer to the DecryptedToken. An error is returned if the android pay
+// token is invalid or there was a problem decrypting it.
 func (apt *AndroidPayToken) VerifyThenDecrypt() (*DecryptedToken, error) {
 	epk, err := base64.StdEncoding.DecodeString(apt.EphemeralPublicKey)
 	if err != nil {
