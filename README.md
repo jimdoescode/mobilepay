@@ -16,7 +16,7 @@ environment and make sure it is properly secured. Checkout
 [the docs](https://developers.google.com/android-pay/integration/payment-token-cryptography#example-using-openssl-to-generate-and-format-a-public-key)
 for more details on how to create an elliptic curve public and private key.
 
-When an Android Pay request comes in JSON will look something like this:
+When an encrypted Android Pay request comes in, the JSON will look something like this:
 ```json
 {
   "encryptedMessage": "ZW5jcnlwdGVkTWVzc2FnZQ==",
@@ -47,7 +47,7 @@ PEM format. You'll have to figure out how to decode your private key if it's
 in another format.
 
 Now that you have an AndroidPayToken value you can call `VerifyThenDecrypt` on
-it to decrypt it and do whatever you need to with the decrypted value.
+it to decrypt it and do whatever you need to with the decrypted result.
 ```golang
 decrypted, err := token.VerifyThenDecrypt()
 if err == nil {
