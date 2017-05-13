@@ -42,7 +42,7 @@ token := &mobilepay.AndroidPayToken{
 	privKey,
 }
 ```
-*Note* in the above code snippet we assume that the private key is stored in 
+**Note** in the above code snippet we assume that the private key is stored in 
 PEM format. You'll have to figure out how to decode your private key if it's 
 in another format.
 
