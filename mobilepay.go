@@ -1,66 +1,67 @@
 package mobilepay
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 )
 
 type DecryptedToken struct {
 	Dpan        string
-	ExpireMonth int
-	ExpireYear  int
+	ExpireMonth string
+	ExpireYear  string
 	Method      string
 	Cryptogram  string
 	Eci         string
 }
 
 type EncryptedToken interface {
-	VerifyThenDecrypt(privkey *ecdsa.PrivateKey) (*DecryptedToken, error)
+	VerifyThenDecrypt() (*DecryptedToken, error)
 }
 
 type AndroidPayToken struct {
 	EncryptedMessage   string
 	EphemeralPublicKey string
 	Tag                string
+	MerchantPrivateKey *ecdsa.PrivateKey
 }
 
-func (apt *AndroidPayToken) VerifyThenDecrypt(privkey *ecdsa.PrivateKey) (*DecryptedToken, error) {
-	decrypted, err := decryptAndroidPayToken(privkey, apt)
+func (apt *AndroidPayToken) VerifyThenDecrypt() (*DecryptedToken, error) {
+	epk, err := base64.StdEncoding.DecodeString(apt.EphemeralPublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("Could not b64 decode ephemeral public key %v", err)
+	}
+
+	msg, err := base64.StdEncoding.DecodeString(apt.EncryptedMessage)
+	if err != nil {
+		return nil, fmt.Errorf("Could not b64 decode encrypted message %v", err)
+	}
+
+	tag, err := base64.StdEncoding.DecodeString(apt.Tag)
+	if err != nil {
+		return nil, fmt.Errorf("Could not b64 decode tag %v", err)
+	}
+
+	decrypted, err := androidPayVerifyAndDecrypt(epk, msg, tag, apt.MerchantPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	var token interface{}
-	err = json.Unmarshal(decrypted, &token)
-	mapping := token.(map[string]interface{})
-
-	return &DecryptedToken{
-		mapping["dpan"].(string),
-		mapping["expirationMonth"].(int),
-		mapping["expirationYear"].(int),
-		mapping["authMethod"].(string),
-		mapping["3dsCryptogram"].(string),
-		mapping["3dsEciIndicator"].(string),
-	}, err
-}
-
-type ApplePayToken struct {
-}
-
-func (apt *ApplePayToken) VerifyThenDecrypt(privkey *ecdsa.PrivateKey) (*DecryptedToken, error) {
-	decrypted, err := decryptApplePayToken(privkey, apt)
-	if err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(decrypted))
+	decoder.UseNumber()
+	if err := decoder.Decode(&token); err != nil {
 		return nil, err
 	}
 
-	var token interface{}
-	err = json.Unmarshal(decrypted, &token)
 	mapping := token.(map[string]interface{})
 
 	return &DecryptedToken{
 		mapping["dpan"].(string),
-		mapping["expirationMonth"].(int),
-		mapping["expirationYear"].(int),
+		mapping["expirationMonth"].(json.Number).String(),
+		mapping["expirationYear"].(json.Number).String(),
 		mapping["authMethod"].(string),
 		mapping["3dsCryptogram"].(string),
 		mapping["3dsEciIndicator"].(string),
