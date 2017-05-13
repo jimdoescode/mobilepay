@@ -25,7 +25,7 @@ When an encrypted Android Pay request comes in, the JSON will look something lik
 }
 ```
 
-Those fields as well as a pointer to your `ecdsa.PrivateKey` are passed to `NewAndroidPayDecryptedToken`.
+Those fields as well as a pointer to your `ecdsa.PrivateKey` are passed to `NewAndroidPayDecryptedToken`. 
 ```golang
 block, _ := pem.Decode(pemPrivateKeyBytes)
 privKey, _ := x509.ParseECPrivateKey(block.Bytes)
@@ -41,9 +41,8 @@ decrypted, err := NewAndroidPayDecryptedToken(
 	privKey,
 )
 ```
-**Note** in the above code snippet we assume that the private key is stored in 
-PEM format. You'll have to figure out how to decode your private key if it's 
-in another format.
+**Note** there is no timing data in the request json, you're responsible for making 
+sure that decryption requests aren't a replay request.
 
 If `NewAndroidPayDecryptedToken` returns a valid DecryptedToken value and not an
 error then you're good to go! Either hand the token off to your payment processor
