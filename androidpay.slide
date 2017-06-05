@@ -1,0 +1,245 @@
+Decrypting Android Pay Tokens
+
+* Who am I?
+
+Jim Saunders
+Senior Engineer @ Etsy.com
+
+gmail: jimdoescode
+github: jimdoescode
+twitter: jimdoescode
+
+* What is this about?
+
+Decrypting the JSON payload sent during an Android Pay transaction.
+
+Turning something like this:
+
+	{
+	  "encryptedMessage": "V65NNwqzK0A1bi0F96HQZr4eFA8fWCatwykv3sFA8Cg4Wn4Ylk/szN6GiFTuYQFrHA7a/h0P3tfEQd09bor6pRqrM8/Bt12R0SHKtnQxbYxTjpMr/7C3Um79n0jseaPlK8+CHXljbYifwGB+cEFh/smP8IO1iw3TL/192HesutfVMKm9zpo5mLNzQ2GMU4JWUGIgrzsew6S6XshelrjE",
+	  "ephemeralPublicKey": "BB9cOXHgf3KcY8dbsU6fhzqTJm3JFvzD+8wcWg0W9r+Xl5gYjoZRxHuYocAx3g82v2o0Le1E2w4sDDl5w3C0lmY=",
+	  "tag": "boJLmOxDduTV5a34CO2IRbgxUjZ9WmfzxNl1lWqQ+Z0="
+	}
+
+Into Something like this:
+
+	{
+	  "Dpan": "4895370012003478",
+	  "ExpireMonth": "12",
+	  "ExpireYear": "2020",
+	  "Method": "3DS",
+	  "Cryptogram": "AgAAAAAABk4DWZ4C28yUQAAAAAA=",
+	  "Eci": "07"
+	}
+	
+: You'll notice that the encrypted message decrypts to more JSON with some familiar fields.
+: Dpan is the device-specific personal account number. Basically it's a token for the underlying CC Pan (primary account number).
+: expiration is self explanatory
+: auth method is currently always "3DS" which stands for 3D Secure and is an additional security layer the card brands use for online payments. 
+: The 3DS Cryptogram is an encrypted version of the CAVV with some other data. How they create it isn't really documented so I'm not entirely sure what all goes in this.
+: The 3DS ECI indicator may not always be present but it indicates if the issuing bank and card holder are registered with 3D secure. https://support.midtrans.com/hc/en-us/articles/204161150-What-is-ECI-on-3D-Secure-
+
+* Where does this happen?
+
+The complete Android Pay flow looks something like this
+
+	[Android Device] -> [PCI] -> [Payment Processor]
+
+: There may be another server sitting between the device and the PCI environment but I want to emphasize that we will be doing the decryption on a PCI compliant server.
+
+Decryption happens in the PCI environment.
+
+*** *IMPORTANT!*
+
+Treat the decrypted JSON as you would a regular credit card.
+
+* When does this happen?
+
+Android Pay Decryption should be done as part of credit card tokenization or authing. 
+
+1. User wants to buy something in your app.
+2. They open up Android Pay and use their thumbprint to start the transaction.
+3. App sends the encrypted Android Pay data to your servers
+4. The data either goes directly to your PCI environment or you forward it there.
+4. You decrypt it (this is what we'll be discussing).
+5. You send the decrypted data to a payment processor.
+6. Payment processor approves and you return a success response back to the app.
+
+: Instead of sending the decrypted data to a payment processor right away you might want to store the data and return a generated token so that your service can wait and process the charge later without having to pass the decrypted data around.
+: I'm not sure how familiar you are with the flow of charging a CC but you first have to auth it and verify that there is enough money on the card to actually perform the charge. Then you settle it which is what actually moves to money.
+: Auths usually show up on your online statement as a pending charge
+
+* Why would you want to do it?
+
+The main reason is freedom. You won't be tied to a single payment processor who has all of your card data.
+
+: At Etsy we use multiple payment processors so not being tied to a single one is valuable to use but most apps aren't at Etsy scale and don't need more than a single good processor.
+
+For most applications this is unnecessary.
+
+Payment processors can decrypt the JSON on their own.
+
+A good rule of thumb is:
+
+- If you don't have a PCI environment then you don't need to decrypt Android Pay data
+
+* How (getting set up)
+
+.link https://developers.google.com/android-pay/integration/payment-token-cryptography Google's Android Pay Token Documentation
+
+Use OpenSSL to generate an elliptic curve public and private key pair. 
+
+The details for how you create this key pair are up to you, as long as it's an elliptic curve key pair.
+
+The public key goes to your Android App to be used in the `MaskedWalletRequest`
+
+The private key stays on your PCI server. (Keep it secret, keep it safe!)
+
+: If you're relying on your processor to manage decryption they should provide you with the public key and maintain the private key themselves. 
+
+* How (parsing the inputs)
+
+4 inputs total, the 3 from Android Pay and your private key. 
+
+The Android Pay values are base 64 encoded.
+
+	merchPrivKeyBuf, _ := base64.StdEncoding.DecodeString(
+		"MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgCPSuFr4iSIaQprjjchHPyDu2NXFe0vDBoTpPkYaK9dehRANCAATnaFz/vQKuO90pxsINyVNWojabHfbx9qIJ6uD7Q7ZSxmtyo/Ez3/o2kDT8g0pIdyVIYktCsq65VoQIDWSh2Bdm",
+	)
+	privkey, _ := x509.ParsePKCS8PrivateKey(merchPrivKeyBuf)
+	merchPrivKey := privkey.(*ecdsa.PrivateKey)
+
+	ephemeralPubKey, _ := base64.StdEncoding.DecodeString("BPhVspn70Zj2Kkgu9t8+ApEuUWsI/zos5whGCQBlgOkuYagOis7qsrcbQrcprjvTZO3XOU+Qbcc28FSgsRtcgQE=")
+	encryptedMsg, _ := base64.StdEncoding.DecodeString("PHxZxBQvVWwP")
+	tag, _ := base64.StdEncoding.DecodeString("TNwa3Q2WiyGi/eDA4XYVklq08KZiSxB7xvRiKK3H7kE=")
+
+: The example values are taken from the Java example code that google provides in their documentation.
+: The private key in that example code is in base64 encoded PKCS8 format. Your own private key might not be in that format. You just need to make sure you can decode it to an ecdsa.PrivateKey
+
+* How (verify and recreate the public key)
+
+Verify that the passed ephemeral public key is derived from the NIST P-256 curve. 
+
+Then create an `ecdsa.PublicKey` instance using the ephemeral public key's coordinates.
+
+	curve := elliptic.P256()
+	x, y := elliptic.Unmarshal(curve, ephemeralPubKey)
+	if x == nil {
+		fmt.Println("Could not unmarshal ephemeral public key")
+		return 
+	}
+
+	if (x.Sign() == 0 && y.Sign() == 0) || 
+		x.Cmp(curve.Params().P) >= 0 || 
+		y.Cmp(curve.Params().P) >= 0 || 
+		!curve.IsOnCurve(x, y) {
+		fmt.Println("Invalid ephemeral public key")
+		return 
+	}
+
+	public := &ecdsa.PublicKey{curve, x, y}
+
+: The elliptic curve used to encrypt Android Pay data is called NIST P-256 or in OpenSSL private256v1.
+: Both crypto/elliptic and crypto/ecdsa packages are in the standard library so there's no need to go get 3rd party dependency.
+: At a super high level elliptic curve cryptography relies on points along a known curve and some offset to generate a value used to decrypt something.
+: All we're doing in this step is verifying that the ephemeral public key lies on the P256 curve then getting the raw values into a usable format.
+
+* How (generate the shared secret and input keying material)
+
+Find the shared secret by using the public key's coordinates and multiplying that by our private key scalar value. 
+
+	shared, _ := elliptic.P256().ScalarMult(public.X, public.Y, merchPrivKey.D.Bytes())
+
+: I'm not exactly sure why we drop the Y scalar value and only use the X as the shared secret.
+
+Use the shared secret concatenated to the ephemeral public key to create the "input keying material". 
+	
+	ikm := bytes.NewBuffer(elliptic.Marshal(public, public.X, public.Y))
+	ikm.Write(shared.Bytes())
+
+: The input keying material is the ephemeral public key concatenated with the shared secret according to the documentation.
+: Input keying material is used in the next steps to generate our mac and decryption keys. These are used to verify the JSON is valid then to decrypt it.
+
+* How (HKDF extract)
+
+Do an HMAC Key Derivation Function (HKDF) using the SHA256 hashing algorithm.
+
+HKDF is a two part operation. 
+
+The first operation is the extract step, which takes the input keying material and performs an HMAC SHA256 operation on it to generate a pseudorandom key.
+
+The Android Pay documentation says not to use a salt so we use 32 zeroed bytes.
+
+	salt := make([]byte, 32) // since the hash is sha256 we use 256 / 8 = 32
+	extract := hmac.New(sha256.New, salt)
+	extract.Write(ikm.Bytes())
+	prk := extract.Sum(nil)
+
+* How (HKDF expand)
+
+The second part of HKDF is the expand step. 
+
+This is typically done by repeatedly HMACing the pseudorandom key with an additional input value and an extra byte each iteration.
+
+Only a single iteration of HKDF expand is needed for Android Pay.
+
+The Android Pay documentation says that the info value of HKDF expand is the ascii string "Android"
+
+	expand := hmac.New(sha256.New, prk)
+	expand.Write([]byte("Android"))
+	expand.Write([]byte{1})
+	t := expand.Sum(nil)
+
+: We only need a single iteration through the expand step because we're generating two combined 128 bit values. Which is equivalent to 256 bits and is the same size as our SHA256 hashing algorithm. 
+
+Split the result to get the decryption key and the mac key
+
+	decryptKey := t[:16]
+	macKey := t[16:]
+
+: The first 128 bits are the decryption key and the second are the mac key.
+
+* How (Verify the mac key)
+
+The tag value from the JSON should be equivalent to the mac key HMACed with the encrypted message from the JSON.
+
+	tagVerify := hmac.New(sha256.New, macKey)
+	tagVerify.Write(encryptedMsg)
+
+Compare the HMACed mac key and encrypted message to the tag value using a constant time comparison to prevent timing attacks.
+
+	if !hmac.Equal(tag, tagVerify.Sum(nil)) {
+		fmt.Println("Invalid cryptogram")
+		return
+	}
+
+*** *IMPORTANT!*
+
+You should check that the tag value is correct before you even attempt to decrypt the encrypted message.
+
+* How (Decrypting the encrypted message, Finally)
+
+Android Pay documentation says to use AES128 CTR mode with a zero IV, no padding, and the symmetric encryption key.
+
+Since the symmetric encryption key is 16 bytes `aes.NewCipher` knows to generate a 128 bit (16 byte) block cipher.
+
+	block, _ := aes.NewCipher(symEncKey)
+	
+Use the size of the encrypted message to allocated a buffer for the decrypted message. The message decrypted than what it was encrypted.
+
+	decrypted := make([]byte, len(msg))
+
+A zero IV means 16 zeroed bytes.
+
+	iv := make([]byte, block.BlockSize())
+	stream := cipher.NewCTR(block, iv)
+	stream.XORKeyStream(decrypted, msg)
+
+* How (Putting it all together)
+
+.link https://play.golang.org/p/ZwX-YKEvHB working example
+
+*** *Limitations*
+
+No built in defense against replay attacks. 
+
